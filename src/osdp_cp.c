@@ -1152,7 +1152,7 @@ static enum osdp_cp_state_e get_next_ok_state(struct osdp_pd *pd)
 		}
 		return OSDP_CP_STATE_ONLINE;
 	case OSDP_CP_STATE_OFFLINE:
-		if (osdp_millis_since(pd->tstamp) > pd->wait_ms) {
+		if (osdp_millis_since(pd->tstamp) > pd->offline_wait_ms) {
 			return OSDP_CP_STATE_INIT;
 		}
 		return OSDP_CP_STATE_OFFLINE;
@@ -1230,16 +1230,31 @@ static void cp_state_change(struct osdp_pd *pd, enum osdp_cp_state_e next)
 		osdp_phy_state_reset(pd, true);
 		break;
 	case OSDP_CP_STATE_ONLINE:
+		pd->offline_wait_ms = 0;
 		LOG_INF("Online; %s SC", sc_is_active(pd) ? "With" : "Without");
 		notify_pd_status(pd, true);
 		break;
 	case OSDP_CP_STATE_OFFLINE:
 		pd->tstamp = osdp_millis_now();
-		pd->wait_ms = OSDP_ONLINE_RETRY_WAIT_MAX_MS;
+		/**
+		 * Retry quickly at first, so a PD that only dropped off for a
+		 * moment (reset, power blip) is picked up again within about a
+		 * second, then back off exponentially while it keeps failing so
+		 * a dead PD is not polled in a tight loop. The wait restarts
+		 * from the initial value once the PD comes online. Kept in its
+		 * own field: pd->wait_ms is also the command retry delay.
+		 */
+		if (pd->offline_wait_ms == 0) {
+			pd->offline_wait_ms = OSDP_ONLINE_RETRY_WAIT_INIT_MS;
+		} else if (pd->offline_wait_ms > OSDP_ONLINE_RETRY_WAIT_MAX_MS / 2) {
+			pd->offline_wait_ms = OSDP_ONLINE_RETRY_WAIT_MAX_MS;
+		} else {
+			pd->offline_wait_ms *= 2;
+		}
 		sc_deactivate(pd);
 		notify_sc_status(pd);
 		LOG_ERR("Going offline for %d seconds; Was in '%s' state",
-			pd->wait_ms / 1000, state_get_name(cur));
+			pd->offline_wait_ms / 1000, state_get_name(cur));
 		notify_pd_status(pd, false);
 		break;
 	case OSDP_CP_STATE_SC_CHLNG:

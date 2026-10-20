@@ -20,6 +20,7 @@ list(APPEND OSDP_UNIT_TEST_SRC
 	test.c
 	test-cp-phy.c
 	test-cp-fsm.c
+	test-cp-offline.c
 	test-file.c
 	test-commands.c
 	test-events.c

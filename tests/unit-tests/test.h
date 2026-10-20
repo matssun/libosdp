@@ -68,6 +68,7 @@ void disable_line_noise();
 void print_line_noise_stats();
 
 void run_cp_fsm_tests(struct test *t);
+void run_cp_offline_tests(struct test *t);
 void run_cp_phy_fsm_tests(struct test *t);
 void run_cp_phy_tests(struct test *t);
 void run_file_tx_tests(struct test *t, bool line_noise);

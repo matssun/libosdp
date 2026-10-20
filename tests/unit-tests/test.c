@@ -374,6 +374,8 @@ int main(int argc, char *argv[])
 
 	run_cp_fsm_tests(&t);
 
+	run_cp_offline_tests(&t);
+
 	run_file_tx_tests(&t, false);
 
 	run_command_tests(&t);
