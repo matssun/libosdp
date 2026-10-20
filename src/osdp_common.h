@@ -686,6 +686,9 @@ struct osdp_pd {
 	int phy_retry_count; /* command retry counter */
 	int phy_tx_seq; /* seq number embedded in last TX packet */
 	uint32_t wait_ms; /* wait time in MS to retry communication */
+	uint32_t offline_wait_ms; /* CP: how long to stay offline before the next
+				   * attempt; backs off while the PD keeps failing
+				   * and is cleared when it comes online. */
 	tick_t tstamp; /* Last POLL command issued time in ticks */
 	tick_t sc_tstamp; /* Last received secure reply time in ticks */
 	tick_t phy_tstamp; /* Time in ticks since command was sent */

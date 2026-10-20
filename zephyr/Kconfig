@@ -152,6 +152,15 @@ config OSDP_CMD_RETRY_WAIT_MS
 		Time in milliseconds to wait before retrying a failed command.
 		Default: 800ms
 
+config OSDP_ONLINE_RETRY_WAIT_INIT_MS
+	int "Initial online retry wait (ms)"
+	default 1000
+	help
+		Time in milliseconds to wait before the first attempt to bring
+		a PD back online after it was declared offline. Every further
+		failure doubles the wait, up to the maximum below, and a PD
+		that comes online starts over. Default: 1000 (1 second)
+
 config OSDP_ONLINE_RETRY_WAIT_MAX_MS
 	int "Maximum online retry wait (ms)"
 	default 300000

@@ -8,6 +8,7 @@ test-api.c
 test-cp-phy.c
 test-pd-phy.c
 test-cp-fsm.c
+test-cp-offline.c
 test-busy.c
 test-file.c
 test-multipart.c

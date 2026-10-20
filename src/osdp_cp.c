@@ -1790,7 +1790,7 @@ static enum osdp_cp_state_e get_next_ok_state(struct osdp_pd *pd)
 		}
 		return OSDP_CP_STATE_ONLINE;
 	case OSDP_CP_STATE_OFFLINE:
-		if (osdp_millis_since(pd->tstamp) > pd->wait_ms) {
+		if (osdp_millis_since(pd->tstamp) > pd->offline_wait_ms) {
 			return OSDP_CP_STATE_INIT;
 		}
 		return OSDP_CP_STATE_OFFLINE;
@@ -1955,6 +1955,7 @@ static void cp_state_change(struct osdp_pd *pd, enum osdp_cp_state_e next)
 		osdp_trs_probe_reset(pd);
 		break;
 	case OSDP_CP_STATE_ONLINE:
+		pd->offline_wait_ms = 0;
 		CLEAR_FLAG(pd, PD_FLAG_TRS_ACTIVE);
 #ifdef OPT_BUILD_OSDP_TRS
 		/* End of a TRS session: the PD never left online, so what the
@@ -1986,7 +1987,21 @@ static void cp_state_change(struct osdp_pd *pd, enum osdp_cp_state_e next)
 		break;
 	case OSDP_CP_STATE_OFFLINE:
 		pd->tstamp = osdp_millis_now();
-		pd->wait_ms = OSDP_ONLINE_RETRY_WAIT_MAX_MS;
+		/*
+		 * Retry quickly at first, so a PD that only dropped off for a
+		 * moment (reset, power blip, cable reseated) is picked up again
+		 * within seconds, then back off exponentially while it keeps
+		 * failing so a PD that is gone for good is not polled in a tight
+		 * loop. Kept in its own field: wait_ms is also the command retry
+		 * delay (OSDP_CMD_RETRY_WAIT_MS).
+		 */
+		if (pd->offline_wait_ms == 0) {
+			pd->offline_wait_ms = OSDP_ONLINE_RETRY_WAIT_INIT_MS;
+		} else if (pd->offline_wait_ms > OSDP_ONLINE_RETRY_WAIT_MAX_MS / 2) {
+			pd->offline_wait_ms = OSDP_ONLINE_RETRY_WAIT_MAX_MS;
+		} else {
+			pd->offline_wait_ms *= 2;
+		}
 		/* Session-scoped requests refer to a session that no longer
 		 * exists; a stale one must not fire on the next ONLINE visit.
 		 * Lifecycle bits (DISABLE/ENABLE) survive. */
@@ -1995,7 +2010,7 @@ static void cp_state_change(struct osdp_pd *pd, enum osdp_cp_state_e next)
 		notify_sc_status(pd);
 		LOG_ERR("Going offline for %" PRIu32
 			" seconds; Was in '%s' state",
-			pd->wait_ms / 1000, state_get_name(cur));
+			pd->offline_wait_ms / 1000, state_get_name(cur));
 		osdp_engines_abort(pd);
 		break;
 	case OSDP_CP_STATE_SC_CHLNG:

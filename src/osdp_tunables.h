@@ -40,8 +40,25 @@
 #define OSDP_CMD_RETRY_WAIT_MS                  (800)
 #endif
 
+/*
+ * How long the CP leaves a PD alone after declaring it offline before it tries
+ * to bring it online again. The first wait is OSDP_ONLINE_RETRY_WAIT_INIT_MS;
+ * every further failure doubles it, up to OSDP_ONLINE_RETRY_WAIT_MAX_MS, and a
+ * PD that comes online starts over from the initial value. A PD that only
+ * dropped off for a moment is picked up again quickly, one that is gone for
+ * good is polled less and less often.
+ */
+#ifndef OSDP_ONLINE_RETRY_WAIT_INIT_MS
+#define OSDP_ONLINE_RETRY_WAIT_INIT_MS          (1 * 1000u)
+#endif
+
 #ifndef OSDP_ONLINE_RETRY_WAIT_MAX_MS
 #define OSDP_ONLINE_RETRY_WAIT_MAX_MS           (300 * 1000u)
+#endif
+
+#if OSDP_ONLINE_RETRY_WAIT_INIT_MS == 0 || \
+	OSDP_ONLINE_RETRY_WAIT_INIT_MS > OSDP_ONLINE_RETRY_WAIT_MAX_MS
+#error "OSDP_ONLINE_RETRY_WAIT_INIT_MS must be non-zero and not exceed OSDP_ONLINE_RETRY_WAIT_MAX_MS"
 #endif
 
 /* TRS presence-scan cadence defaults (see osdp_cp_trs_scan_enable) */
